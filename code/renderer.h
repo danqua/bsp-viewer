@@ -2,15 +2,15 @@
 
 struct program
 {
-	GLuint ID;
+    GLuint ID;
 
-	// Attributes
-	GLint VertPositionID;
-	GLint VertNormalID;
-	GLint VertUVID;
+    // Attributes
+    GLint VertPositionID;
+    GLint VertNormalID;
+    GLint VertUVID;
 
-	GLint ProjectionMatrixID;
-	GLint ModelViewMatrixID;
+    GLint ProjectionMatrixID;
+    GLint ModelViewMatrixID;
 };
 
 struct program_flat_shaded : program
@@ -19,8 +19,8 @@ struct program_flat_shaded : program
 
 struct render_info
 {
-	GLuint VAO;
-	GLuint PositionVBO;
-	GLuint NormalVBO;
-	GLuint UVVBO;
+    GLuint VAO;
+    GLuint PositionVBO;
+    GLuint NormalVBO;
+    GLuint UVVBO;
 };

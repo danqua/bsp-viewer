@@ -18,6 +18,7 @@ project "BSPViewer"
 	includedirs {
 		"code",
 		path.join("extern", "SDL2-2.0.18", "include"),
+		path.join("extern", "glm-0.9.9.8"),
 		path.join("extern", "glad", "include")
 	}
 	libdirs {
@@ -25,7 +26,7 @@ project "BSPViewer"
 	}
 	files {
 		"code/**.h",
-		"code/**.cpp",
+		"code/main.cpp",
 		"extern/glad/src/glad.c"
 	}
 	links {

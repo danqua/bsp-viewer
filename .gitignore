@@ -96,6 +96,8 @@ StyleCopReport.xml
 *.scc
 *.sln
 *.vcxproj
+*.vcxproj.user
+*.vcxproj.filters
 
 # Chutzpah Test files
 _Chutzpah*
@@ -355,3 +357,4 @@ MigrationBackup/
 
 # SDL2
 [Ee]xtern/SDL2-2.0.18
+[Ee]xtern/glm-0.9.9.8

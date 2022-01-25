@@ -28,7 +28,7 @@ static bool CreateWindowAndOpenGLContext(application* Application, s32 WindowWid
 inline application* CreateApplication()
 {
     application* Application = (application*)malloc(sizeof *Application);
-    if (CreateWindowAndOpenGLContext(Application, 800, 600)) {
+    if (CreateWindowAndOpenGLContext(Application, 1280, 720)) {
         return Application;
     }
     free(Application);

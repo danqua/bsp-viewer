@@ -4,7 +4,7 @@
 #define BSP_LUMP_PLANES	        1
 #define BSP_LUMP_TEXTURES       2
 #define BSP_LUMP_VERTICES       3
-#define BSP_LUMP_VISIBILITY	    4
+#define BSP_LUMP_VISIBILITY     4
 #define BSP_LUMP_NODES          5
 #define BSP_LUMP_TEXINFO        6
 #define BSP_LUMP_FACES          7

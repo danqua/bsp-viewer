@@ -1,3 +1,24 @@
+static GLuint OpenGLCreateTexture(const void* Pixels, s32 Width, s32 Height, GLenum Format)
+{
+    GLuint Texture;
+    glGenTextures(1, &Texture);
+    glBindTexture(GL_TEXTURE_2D, Texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, Format, Width, Height, GL_NONE, Format, GL_UNSIGNED_BYTE, Pixels);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    return Texture;
+}
+
+static void OpenGLTextureFilter(GLuint Texture, GLenum Filter)
+{
+    glBindTexture(GL_TEXTURE_2D, Texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, Filter);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, Filter);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 static GLuint OpenGLCreateProgram(const char* VertexCode, const char* FragmentCode, program* Result)
 {
     GLuint VertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -35,28 +56,77 @@ static GLuint OpenGLCreateProgram(const char* VertexCode, const char* FragmentCo
 
     Result->ID = Program;
     Result->VertPositionID = glGetAttribLocation(Program, "VertPosition");
-    Result->VertNormalID = glGetAttribLocation(Program, "VertNormal");
     Result->VertUVID = glGetAttribLocation(Program, "VertUV");
 
     return Program;
 }
 
-static void CompileFlatShadedProgram(program_flat_shaded* Result)
+static void CompileQuakeProgram(program_quake* Result)
 {
     const char* VertexShaderCode = R"(
     #version 330 core
     layout (location = 0) in vec3 VertPosition;
-    layout (location = 1) in vec3 VertNormal;
-    layout (location = 2) in vec2 VertUV;
+    layout (location = 1) in vec2 VertUV;
+    layout (location = 2) in vec2 VertLightMap;
 
-    out vec3 Normal;
+    out vec2 UV;
+    out vec2 LightMapUV;
+
+    uniform mat4 ProjectionMatrix;
+    uniform mat4 ModelViewMatrix;
+
+    void main() {
+        UV = VertUV;
+        LightMapUV = VertLightMap;
+        gl_Position = ProjectionMatrix * ModelViewMatrix * vec4(VertPosition, 1.0);
+    }
+    )";
+
+    const char* FragmentShaderCode = R"(
+    #version 330 core
+    in vec2 UV;
+    in vec2 LightMapUV;
+    out vec4 FragColor;
+    uniform sampler2D Texture;
+    uniform sampler2D ColorPalette;
+    uniform sampler2D LightMapTexture;
+
+
+    void main() {
+        
+        int Index = int(abs(texture(Texture, UV).r * 255));
+        float S = (Index % 16) / 16.0;
+        float T = (Index / 16) / 16.0;
+
+        vec4 Diffuse = texture(ColorPalette, vec2(S, T));
+        vec4 Light = vec4(vec3(texture(LightMapTexture, LightMapUV).r), 1.0);
+        vec4 Color = Diffuse * Light * 2.0;
+        FragColor = Color;
+    }
+    )";
+
+    GLuint Program = OpenGLCreateProgram(VertexShaderCode, FragmentShaderCode, Result);
+    Result->VertLightMapID = glGetAttribLocation(Program, "VertLightMap");
+    Result->ProjectionMatrixID = glGetUniformLocation(Program, "ProjectionMatrix");
+    Result->ModelViewMatrixID = glGetUniformLocation(Program, "ModelViewMatrix");
+    Result->TextureID = glGetUniformLocation(Program, "Texture");
+    Result->ColorPaletteID = glGetUniformLocation(Program, "ColorPalette");
+    Result->LightmapID = glGetUniformLocation(Program, "LightMapTexture");
+}
+
+static void CompileQuadProgram(program_quad* Result)
+{
+    const char* VertexShaderCode = R"(
+    #version 330 core
+    layout (location = 0) in vec3 VertPosition;
+    layout (location = 1) in vec2 VertUV;
+
     out vec2 UV;
 
     uniform mat4 ProjectionMatrix;
     uniform mat4 ModelViewMatrix;
 
     void main() {
-        Normal = abs(VertNormal);
         UV = VertUV;
         gl_Position = ProjectionMatrix * ModelViewMatrix * vec4(VertPosition, 1.0);
     }
@@ -64,13 +134,11 @@ static void CompileFlatShadedProgram(program_flat_shaded* Result)
 
     const char* FragmentShaderCode = R"(
     #version 330 core
-    in vec3 Normal;
     in vec2 UV;
     out vec4 FragColor;
-    uniform vec3 Color;
     uniform sampler2D Texture;
     void main() {
-        FragColor = texture(Texture, UV);
+        FragColor = texture(Texture, UV).rrrr;
     }
     )";
 

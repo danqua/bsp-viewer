@@ -6,21 +6,40 @@ struct program
 
     // Attributes
     GLint VertPositionID;
-    GLint VertNormalID;
     GLint VertUVID;
 
+    // Uniforms
     GLint ProjectionMatrixID;
     GLint ModelViewMatrixID;
 };
 
-struct program_flat_shaded : program
+struct program_quad : program
 {
+
+};
+
+struct program_quake : program
+{
+    // Attributes
+    GLint VertLightMapID;
+
+    // Uniforms
+    GLint TextureID;
+    GLint ColorPaletteID;
+    GLint LightmapID;
 };
 
 struct render_info
 {
     GLuint VAO;
     GLuint PositionVBO;
-    GLuint NormalVBO;
     GLuint UVVBO;
+    GLuint LightMapVBO;
+};
+
+struct color
+{
+    u8 R;
+    u8 G;
+    u8 B;
 };

@@ -9,7 +9,7 @@ struct map
     bsp_plane* Planes;
 
     s32 TextureCount;
-    bsp_miptex* Textures;
+    bsp_miptex_lump* MiptexLump;
 
     s32 VertexCount;
     v3* Vertices;
@@ -49,4 +49,41 @@ struct map
 
     // Rendering info
     render_info RenderInfo;
+};
+
+struct texture
+{
+    GLuint ID;
+    s32 Width;
+    s32 Height;
+};
+
+struct surface
+{
+    s32 FirstEdge;
+    s32 NumEdges;
+    s32 TexInfo;
+    texture* Texture;
+
+    s16 TextureMins[2];
+    s16 Extents[2];
+
+    s32 LightmapS;
+    s32 LightmapT;
+};
+
+struct image
+{
+    s32 Width;
+    s32 Height;
+    s32 XOffset;
+    s32 YOffset;
+    u8* Pixels;
+};
+
+struct vertex
+{
+    v3 Position;
+    v2 UV;
+    v2 LightMap;
 };

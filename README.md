@@ -33,4 +33,6 @@ This Project uses following external libraries
 
 ## References
 
+Through the development I used the original source code of Quake and the unofficial BSP specification as a reference guide.
++ [https://github.com/id-Software/Quake](https://github.com/id-Software/Quake)
 + [https://www.gamers.org/dEngine/quake/spec/quake-spec34/](https://www.gamers.org/dEngine/quake/spec/quake-spec34/)

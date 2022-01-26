@@ -105,7 +105,7 @@ static void CompileQuakeProgram(program_quake* Result)
 
 
 
-        //if (BaseLight == 0 && length(Light) > 0.0)
+        if (BaseLight == 0 && length(Light) > 0.0)
             Color *= Light * 2.0;
 
         FragColor = Color;

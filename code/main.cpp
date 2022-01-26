@@ -43,7 +43,6 @@ void DrawFaces(s32 FirstFace, s32 NumFaces)
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, Surface->Texture->ID);
 
-
             glDrawArrays(GL_TRIANGLE_FAN, Surface->VBOOffset, Surface->NumEdges);
         }
         Surface++;
@@ -91,10 +90,10 @@ int SDL_main(int Argc, char** Argv)
     application* Application = CreateApplication();
 
     camera Camera;
-    CreateCamera(&Camera, 60.0f, 16.0f / 9.0f, 0.1f, 65535.0f);
+    CreateCamera(&Camera, 75.0f, 16.0f / 9.0f, 0.1f, 65535.0f);
     Camera.Position = v3(544.0f, 288.0f, 32.0f + 56.0f);
 
-    LoadMap("e1m1.bsp");
+    LoadMap("start.bsp");
     CreateColorPalette();
     CreateSurfaces();
     CreateVertexBuffer();

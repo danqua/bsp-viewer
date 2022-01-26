@@ -4,7 +4,7 @@
 
 This is a work in progress Quake BSP viewer, that allows you to load original Quake maps and explore them with a fly through camera. The code was written in C++ and OpenGL a very C-Style way.
 
-It dynamically creates a texture atlas for the lightmaps and calculates the s/t coordinates with their associated faces (this doesn't work in 90% of the cases).
+It dynamically creates a texture atlas for the lightmaps and calculates the s/t coordinates with their associated faces (this doesn't work in 10% of the cases).
 
 ## Building
 

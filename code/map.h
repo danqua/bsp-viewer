@@ -47,8 +47,6 @@ struct map
     s32 ModelCount;
     bsp_model* Models;
 
-    // Rendering info
-    render_info RenderInfo;
 };
 
 struct texture
@@ -63,6 +61,8 @@ struct surface
     s32 FirstEdge;
     s32 NumEdges;
     s32 TexInfo;
+    s32 VBOOffset;
+    u8 Styles[4];
     texture* Texture;
 
     s16 TextureMins[2];
@@ -86,4 +86,20 @@ struct vertex
     v3 Position;
     v2 UV;
     v2 LightMap;
+};
+
+struct render_group
+{
+    GLuint VAO;
+    GLuint VBO;
+};
+
+struct game_state
+{
+    render_group RenderGroup;
+
+    map* Map;
+
+    GLuint LightmapTID;
+    GLuint ColorPaletteTID;
 };

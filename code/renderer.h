@@ -27,6 +27,7 @@ struct program_quake : program
     GLint TextureID;
     GLint ColorPaletteID;
     GLint LightmapID;
+    GLint BaseLightID;
 };
 
 struct render_info

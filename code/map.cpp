@@ -2,14 +2,12 @@
 #define LIGHTMAP_WIDTH 512
 #define LIGHTMAP_HEIGHT 512
 
-static GLuint LightMapTextureID;
-static GLuint ColorPalette;
-
-static bsp_header* BSPHeader = nullptr;
+static game_state GameState;
+static bsp_header* BSPHeader;
+static map Map;
 
 static texture* Textures;
 
-static map* LoadedMap = nullptr;
 static surface* Surfaces;
 
 static s32 Allocated[LIGHTMAP_WIDTH];
@@ -28,15 +26,10 @@ static GLuint CreateColorPalette()
     fread(Buffer, 1, Length, File);
     fclose(File);
 
-    glGenTextures(1, &ColorPalette);
-    glBindTexture(GL_TEXTURE_2D, ColorPalette);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 16, 16, GL_NONE, GL_RGB, GL_UNSIGNED_BYTE, Buffer);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    GameState.ColorPaletteTID = OpenGLCreateTexture(Buffer, 16, 16, GL_RGB);
+
     free(Buffer);
-    return ColorPalette;
+    return GameState.ColorPaletteTID;
 }
 
 bool AllocBlock(s32 Width, s32 Height, s32* X, s32* Y)
@@ -64,8 +57,8 @@ bool AllocBlock(s32 Width, s32 Height, s32* X, s32* Y)
     if (Best + Height > LIGHTMAP_HEIGHT)
         return false;
 
-    for (int i = 0; i < Width; i++)
-        Allocated[*X + i] = Best + Height;
+    for (int I = 0; I < Width; I++)
+        Allocated[*X + I] = Best + Height;
 
     return true;
 }
@@ -73,7 +66,7 @@ bool AllocBlock(s32 Width, s32 Height, s32* X, s32* Y)
 template <typename T>
 inline s32 CopyLump(T** Field, s32 Lump)
 {
-    s8* RawData = (s8*)BSPHeader;
+    s8* RawData = (s8*)(BSPHeader);
     s32 Count = BSPHeader->Lumps[Lump].Length / (s32)sizeof(T);
     *Field = (T*)(RawData + BSPHeader->Lumps[Lump].Offset);
     return Count;
@@ -86,13 +79,12 @@ inline s32 CopyTextureLump(bsp_miptex_lump** MiptexLump)
     return (*MiptexLump)->MiptexCount;
 }
 
-
-
-static bool LoadMap(map* Result, const char* Filename)
+static bool LoadMap(const char* Filename)
 {
-    if (BSPHeader) {
+    if (BSPHeader)
+    {
         free(BSPHeader);
-        BSPHeader = nullptr;
+       BSPHeader = nullptr;
     }
 
     FILE* File = fopen(Filename, "rb");
@@ -107,36 +99,37 @@ static bool LoadMap(map* Result, const char* Filename)
     fread(BSPHeader, 1, Length, File);
     fclose(File);
 
-    Result->EntitiyCount        = CopyLump(&Result->Entities,     BSP_LUMP_ENTITIES);
-    Result->PlaneCount          = CopyLump(&Result->Planes,       BSP_LUMP_PLANES);
-    Result->VertexCount	        = CopyLump(&Result->Vertices,     BSP_LUMP_VERTICES);
-    Result->VisCount            = CopyLump(&Result->VisData,      BSP_LUMP_VISIBILITY);
-    Result->NodeCount           = CopyLump(&Result->Nodes,        BSP_LUMP_NODES);
-    Result->TexInfoCount        = CopyLump(&Result->TexInfos,     BSP_LUMP_TEXINFO);
-    Result->FaceCount           = CopyLump(&Result->Faces,        BSP_LUMP_FACES);
-    Result->LightingCount       = CopyLump(&Result->LightMaps,    BSP_LUMP_LIGHTING);
-    Result->ClipNodeCount       = CopyLump(&Result->ClipNodes,    BSP_LUMP_CLIPNODES);
-    Result->LeafCount           = CopyLump(&Result->Leafs,        BSP_LUMP_LEAFS);
-    Result->MarkSurfaceCount    = CopyLump(&Result->MarkSurfaces, BSP_LUMP_MARKSURFACES);
-    Result->EdgeCount           = CopyLump(&Result->Edges,        BSP_LUMP_EDGES);
-    Result->SurfEdgeCount       = CopyLump(&Result->SurfEdges,    BSP_LUMP_SURFEDGES);
-    Result->ModelCount          = CopyLump(&Result->Models,       BSP_LUMP_MODELS);
+    Map.EntitiyCount        = CopyLump(&Map.Entities,     BSP_LUMP_ENTITIES);
+    Map.PlaneCount          = CopyLump(&Map.Planes,       BSP_LUMP_PLANES);
+    Map.VertexCount	        = CopyLump(&Map.Vertices,     BSP_LUMP_VERTICES);
+    Map.VisCount            = CopyLump(&Map.VisData,      BSP_LUMP_VISIBILITY);
+    Map.NodeCount           = CopyLump(&Map.Nodes,        BSP_LUMP_NODES);
+    Map.TexInfoCount        = CopyLump(&Map.TexInfos,     BSP_LUMP_TEXINFO);
+    Map.FaceCount           = CopyLump(&Map.Faces,        BSP_LUMP_FACES);
+    Map.LightingCount       = CopyLump(&Map.LightMaps,    BSP_LUMP_LIGHTING);
+    Map.ClipNodeCount       = CopyLump(&Map.ClipNodes,    BSP_LUMP_CLIPNODES);
+    Map.LeafCount           = CopyLump(&Map.Leafs,        BSP_LUMP_LEAFS);
+    Map.MarkSurfaceCount    = CopyLump(&Map.MarkSurfaces, BSP_LUMP_MARKSURFACES);
+    Map.EdgeCount           = CopyLump(&Map.Edges,        BSP_LUMP_EDGES);
+    Map.SurfEdgeCount       = CopyLump(&Map.SurfEdges,    BSP_LUMP_SURFEDGES);
+    Map.ModelCount          = CopyLump(&Map.Models,       BSP_LUMP_MODELS);
 
     // Initialize textures
-    Result->TextureCount        = CopyTextureLump(&Result->MiptexLump);
-    Textures = (texture*)malloc(sizeof(texture) * Result->TextureCount);
-    Assert(memset(Textures, 0, sizeof(texture) * Result->TextureCount));
+    Map.TextureCount = CopyTextureLump(&Map.MiptexLump);
+    Textures = (texture*)malloc(sizeof(texture) * Map.TextureCount);
+    Assert(Textures);
+    memset(Textures, 0, sizeof(texture) * Map.TextureCount);
 
-    for (s32 I = 0; I < Result->TextureCount; I++)
+    for (s32 I = 0; I < Map.TextureCount; I++)
     {
-        if (Result->MiptexLump->DataOffset[I] == 0)
+        if (Map.MiptexLump->DataOffset[I] == 0)
         {
             // Load externally
             s32 TextureNotInWad = 0;
         }
         else
         {
-            bsp_miptex* Miptex = (bsp_miptex*)(((s8*)Result->MiptexLump) + Result->MiptexLump->DataOffset[I]);
+            bsp_miptex* Miptex = (bsp_miptex*)(((s8*)Map.MiptexLump) + Map.MiptexLump->DataOffset[I]);
             u8* Pixels = (u8*)Miptex + Miptex->Offsets[0];
             texture* Texture = &Textures[I];
             Texture->Width = Miptex->Width;
@@ -145,32 +138,23 @@ static bool LoadMap(map* Result, const char* Filename)
         }
     }
 
-
-
-    Result->RenderInfo.VAO = 0;
-    Result->RenderInfo.PositionVBO = 0;
-    Result->RenderInfo.UVVBO = 0;
-    Result->RenderInfo.LightMapVBO = 0;
-
-    LoadedMap = Result;
-
-    Surfaces = (surface*)malloc(LoadedMap->FaceCount * sizeof(surface));
+    Surfaces = (surface*)malloc(Map.FaceCount * sizeof(surface));
 
     static u8 EmptyPixels[LIGHTMAP_WIDTH * LIGHTMAP_HEIGHT] = {};
     for (s32 I = 0; I < LIGHTMAP_WIDTH * LIGHTMAP_HEIGHT; I++)
         EmptyPixels[I] = 255;
 
     // Create texture atlas for lightmap
-    LightMapTextureID = OpenGLCreateTexture(0, LIGHTMAP_WIDTH, LIGHTMAP_HEIGHT, GL_RED);
-    OpenGLTextureFilter(LightMapTextureID, GL_LINEAR);
+    GameState.LightmapTID = OpenGLCreateTexture(0, LIGHTMAP_WIDTH, LIGHTMAP_HEIGHT, GL_RED);
+    OpenGLTextureFilter(GameState.LightmapTID, GL_LINEAR);
     return true;
 }
 
 
 static void GetMiptexSize(const bsp_face* Face, s32* Width, s32* Height)
 {
-    bsp_tex_info* TexInfo = &LoadedMap->TexInfos[Face->TexInfo];
-    bsp_miptex* Miptex = (bsp_miptex*)(((s8*)LoadedMap->MiptexLump) + LoadedMap->MiptexLump->DataOffset[TexInfo->Miptex]);
+    bsp_tex_info* TexInfo = &Map.TexInfos[Face->TexInfo];
+    bsp_miptex* Miptex = (bsp_miptex*)(((s8*)Map.MiptexLump) + Map.MiptexLump->DataOffset[TexInfo->Miptex]);
     *Width = Miptex->Width;
     *Height = Miptex->Height;
 }
@@ -180,17 +164,17 @@ static void CalcSurfaceExtents(surface* Surface)
     v2 UVMin = v2(FLT_MAX);
     v2 UVMax = v2(-FLT_MAX);
 
-    bsp_tex_info* TexInfo = &LoadedMap->TexInfos[Surface->TexInfo];
+    bsp_tex_info* TexInfo = &Map.TexInfos[Surface->TexInfo];
 
     for (s32 I = 0; I < Surface->NumEdges; I++)
     {
-        s32 Index = ((s32*)LoadedMap->SurfEdges)[Surface->FirstEdge + I];
+        s32 Index = ((s32*)Map.SurfEdges)[Surface->FirstEdge + I];
         v3 Position;
 
         if (Index >= 0)
-            Position = LoadedMap->Vertices[LoadedMap->Edges[Index][0]];
+            Position = Map.Vertices[Map.Edges[Index][0]];
         else
-            Position = LoadedMap->Vertices[LoadedMap->Edges[-Index][1]];
+            Position = Map.Vertices[Map.Edges[-Index][1]];
         
 
         f64 U = (f64)Position.x * (f64)TexInfo->UAxis.x +
@@ -218,19 +202,31 @@ static void CalcSurfaceExtents(surface* Surface)
         Surface->Extents[I] = (Max - Min) * 16;
     }
 }
-bool loaded = false;
-static void CreateSurfaces(map* Map)
+
+static void CreateSurfaces()
 {
     surface* Surface = Surfaces;
-
-    for (bsp_face* Face = Map->Faces; Face != &Map->Faces[Map->FaceCount]; Face++, Surface++)
+    s32 VBOOffset = 0;
+    for (bsp_face* Face = Map.Faces; Face != &Map.Faces[Map.FaceCount]; Face++, Surface++)
     {
         Surface->FirstEdge = Face->FirstEdge;
         Surface->NumEdges = Face->EdgeCount;
         Surface->TexInfo = Face->TexInfo;
+
+        Surface->VBOOffset = VBOOffset;
         CalcSurfaceExtents(Surface);
         Surface->LightmapS = 0;
         Surface->LightmapT = 0;
+        Surface->Texture = 0;
+        for (s32 I = 0; I < 4; I++)
+        {
+            Surface->Styles[I] = Face->Styles[I];
+        }
+
+        if (Map.TexInfos[Face->TexInfo].Miptex < Map.TextureCount)
+        {
+            Surface->Texture = &Textures[Map.TexInfos[Face->TexInfo].Miptex];
+        }
         
         s32 Width = (Surface->Extents[0] >> 4) + 1;
         s32 Height = (Surface->Extents[1] >> 4) + 1;
@@ -243,99 +239,59 @@ static void CreateSurfaces(map* Map)
             Image.Height = Height;
             Image.XOffset = Surface->LightmapS;
             Image.YOffset = Surface->LightmapT;
-            Image.Pixels = &LoadedMap->LightMaps[Face->LightOffset];
+            Image.Pixels = &Map.LightMaps[Face->LightOffset];
             Images.push_back(Image);
-            //glBindTexture(GL_TEXTURE_2D, LightMapTextureID);
-            //glTexSubImage2D(GL_TEXTURE_2D, 0, Surface->LightmapS, Surface->LightmapT, Width, Height, GL_RED, GL_UNSIGNED_BYTE, &LoadedMap->LightMaps[Face->LightOffset]);
         }
 
-        /*
-        s32 NumVertices = Face->EdgeCount;
-        bsp_tex_info* TexInfo = &Map->TexInfos[Face->TexInfo];
-        s32 MiptexWidth, MiptexHeight;
-        GetMiptexSize(Face, &MiptexWidth, &MiptexHeight);
-        
-        for (s32 I = 0; I < NumVertices; I++)
-        {
-            s32 Index = Map->SurfEdges[Face->FirstEdge + I];
-            v3 Position;
-
-            if (Index > 0) Position = Map->Vertices[Map->Edges[Index][0]];
-            else Position = Map->Vertices[Map->Edges[-Index][1]];
-
-            // Texture
-            f32 U = glm::dot(Position, TexInfo->UAxis) + TexInfo->UOffset;
-            U /= MiptexWidth;
-            
-            f32 V = glm::dot(Position, TexInfo->VAxis) + TexInfo->VOffset;
-            V /= MiptexHeight;
-
-            // Lightmap
-            f32 S = glm::dot(Position, TexInfo->UAxis) + TexInfo->UOffset;
-            S -= (f32)Surface->TextureMins[0];
-            S += (f32)Surface->LightmapS * 16.0f;
-            S += 8;
-            S /= LIGHTMAP_WIDTH * 16;
-            
-            f32 T = glm::dot(Position, TexInfo->VAxis) + TexInfo->VOffset;
-            S -= (f32)Surface->TextureMins[1];
-            S += (f32)Surface->LightmapT * 16.0f;
-            S += 8;
-            S /= LIGHTMAP_WIDTH * 16;
-        }
-        */
+        VBOOffset += Face->EdgeCount;
     }
 
+    for (const image& Image : Images)
     {
-        for (const image& Image : Images)
+        for (s32 Y = 0; Y < Image.Height; Y++)
         {
-            for (s32 Y = 0; Y < Image.Height; Y++)
-            {
-                u8* Source = &Image.Pixels[Y * Image.Width];
-                u8* Destination = LightmapImage + ((Image.YOffset + Y) * LIGHTMAP_WIDTH+ Image.XOffset);
-                std::copy(Source, Source + Image.Width, Destination);
-            }
+            u8* Source = &Image.Pixels[Y * Image.Width];
+            u8* Destination = LightmapImage + ((Image.YOffset + Y) * LIGHTMAP_WIDTH + Image.XOffset);
+            std::copy(Source, Source + Image.Width, Destination);
         }
-
-        glBindTexture(GL_TEXTURE_2D, LightMapTextureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, LIGHTMAP_WIDTH, LIGHTMAP_HEIGHT, GL_NONE, GL_RED, GL_UNSIGNED_BYTE, LightmapImage);
-
     }
+
+    glBindTexture(GL_TEXTURE_2D, GameState.LightmapTID);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, LIGHTMAP_WIDTH, LIGHTMAP_HEIGHT, GL_NONE, GL_RED, GL_UNSIGNED_BYTE, LightmapImage);
 }
 
-static void CreateVertexBuffer(map* Map)
+static void CreateVertexBuffer()
 {
-    CreateSurfaces(Map);
-
     s32 VertexCount = 0;
-    for (bsp_face* Face = Map->Faces; Face != &Map->Faces[Map->FaceCount]; Face++)
+    for (bsp_face* Face = Map.Faces; Face != &Map.Faces[Map.FaceCount]; Face++)
         VertexCount += Face->EdgeCount;
+
 
     vertex* Vertices = (vertex*)malloc(sizeof(vertex) * VertexCount);
     vertex* Vertex = Vertices;
     surface* Surface = Surfaces;
 
-    for (bsp_face* Face = LoadedMap->Faces; Face != &LoadedMap->Faces[LoadedMap->FaceCount]; Face++, Surface++)
+    for (bsp_face* Face = Map.Faces; Face != &Map.Faces[Map.FaceCount]; Face++, Surface++)
     {
         s32 NumVertices = Face->EdgeCount;
-        bsp_tex_info* TexInfo = &LoadedMap->TexInfos[Face->TexInfo];
+        bsp_tex_info* TexInfo = &Map.TexInfos[Face->TexInfo];
 
         s32 MiptexWidth, MiptexHeight;
         GetMiptexSize(Face, &MiptexWidth, &MiptexHeight);
 
         for (s32 I = 0; I < NumVertices; I++, Vertex++)
         {
-            s32 Index = ((s32*)LoadedMap->SurfEdges)[Face->FirstEdge + I];
+            s32 Index = ((s32*)Map.SurfEdges)[Face->FirstEdge + I];
 
             if (Index > 0)
             {
-                s16 Edge = LoadedMap->Edges[Index][0];
-                Vertex->Position = LoadedMap->Vertices[Edge];
+                s16 Edge = Map.Edges[Index][0];
+                Vertex->Position = Map.Vertices[Edge];
             }
             else
             {
-                s16 Edge = LoadedMap->Edges[-Index][1];
-                Vertex->Position = LoadedMap->Vertices[Edge];
+                s16 Edge = Map.Edges[-Index][1];
+                Vertex->Position = Map.Vertices[Edge];
             }
 
             // Texture
@@ -350,7 +306,7 @@ static void CreateVertexBuffer(map* Map)
             }
 
             // Lightmap
-            {
+            if (Face->LightOffset != -1) {
                 f32 S = glm::dot(Vertex->Position, TexInfo->UAxis) + TexInfo->UOffset;
                 S -= (f32)Surface->TextureMins[0];
                 S += (f32)(Surface->LightmapS * 16);
@@ -384,8 +340,40 @@ static void CreateVertexBuffer(map* Map)
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const void*)(offsetof(vertex, LightMap)));
 
-    Map->RenderInfo.VAO = VAO;
-    Map->RenderInfo.PositionVBO = VBO;
+    GameState.RenderGroup.VAO = VAO;
+    GameState.RenderGroup.VBO = VBO;
 
     free(Vertices);
+}
+
+static bool ReadFile(const char* Filename, u8** Buffer, size_t* SizeInBytes)
+{
+    FILE* Context = fopen(Filename, "rb");
+
+    if (!Context)
+        return false;
+
+    fseek(Context, 0, SEEK_END);
+    *SizeInBytes = ftell(Context);
+    rewind(Context);
+    *Buffer = (u8*)malloc(*SizeInBytes);
+
+    if (!(*Buffer))
+    {
+        *SizeInBytes = 0;
+        return false;
+    }
+
+    fread(*Buffer, 1, *SizeInBytes, Context);
+    fclose(Context);
+    return true;
+}
+
+static bool PointInBounds(const v3& Min, const v3& Max, const v3& P)
+{
+    return (
+        (P.x >= Min.x && P.x <= Max.x) &&
+        (P.y >= Min.y && P.y <= Max.y) &&
+        (P.z >= Min.z && P.z <= Max.z)
+    );
 }

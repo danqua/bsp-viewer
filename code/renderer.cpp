@@ -90,6 +90,7 @@ static void CompileQuakeProgram(program_quake* Result)
     uniform sampler2D Texture;
     uniform sampler2D ColorPalette;
     uniform sampler2D LightMapTexture;
+    uniform int BaseLight;
 
 
     void main() {
@@ -100,7 +101,13 @@ static void CompileQuakeProgram(program_quake* Result)
 
         vec4 Diffuse = texture(ColorPalette, vec2(S, T));
         vec4 Light = vec4(vec3(texture(LightMapTexture, LightMapUV).r), 1.0);
-        vec4 Color = Diffuse * Light * 2.0;
+        vec4 Color = Diffuse;
+
+
+
+        //if (BaseLight == 0 && length(Light) > 0.0)
+            Color *= Light * 2.0;
+
         FragColor = Color;
     }
     )";
@@ -112,6 +119,7 @@ static void CompileQuakeProgram(program_quake* Result)
     Result->TextureID = glGetUniformLocation(Program, "Texture");
     Result->ColorPaletteID = glGetUniformLocation(Program, "ColorPalette");
     Result->LightmapID = glGetUniformLocation(Program, "LightMapTexture");
+    Result->BaseLightID = glGetUniformLocation(Program, "BaseLight");
 }
 
 static void CompileQuadProgram(program_quad* Result)

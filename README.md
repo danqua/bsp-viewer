@@ -1,25 +1,26 @@
 # Quake BSP Viewer
 
-![QuakeStart](resources/QuakeBSP.png)
+![QuakeStart](resources/quake_start.jpg)
 
-This is a work in progress Quake BSP viewer, that allows you to load original Quake maps and explore them with a fly through camera. The code was written in C++ and OpenGL a very C-Style way.
+This viewer allows you to revisit original Quake (1996) maps. It is extreamly fast and only performs so many draw calls of how many textures are used in a single map. It features lightmaps and animated skies as well, what a lot of repositories on github don't do. The code is written in C++ and OpenGL 3.3.
 
-It dynamically creates a texture atlas for the lightmaps and calculates the s/t coordinates with their associated faces (this doesn't work in 10% of the cases).
+There is also a small video that shows the viewer in action.
+[https://www.youtube.com/watch?v=GT7dP5C2cZM](https://www.youtube.com/watch?v=GT7dP5C2cZM)
 
 ## Building
 
-This project was created with premake5 and was build with Visual Studio 2022. You need to provide two additional dependencies -> SDL2 and an OpenGL loader of your choice, I used GLAD.
-This project also makes use of unity builds and builds really fast with only the main.cpp to be build.
+This project uses just a batch file to compile the project. So in order to compile the project make sure you have [Microsoft Visual C++ Build Tools](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170) installed on your machine. You also need to compile from the *Developer Command Prompt* or run the [shell.bat](misc/shall.bat) to set the environment variables. All the dependencies are listed below. This project also makes use of a technique called [SCU](https://en.wikipedia.org/wiki/Single_compilation_unit).
 
 ```
-premake5 vs2022
+misc\shell.bat
+code\build.bat
 ```
 
 ## Dependencies
-
-This Project uses following external libraries
-+ SDL2 for windowing/input
-+ GLAD for modern OpenGL support
+Make sure to have a look at the [build.bat](code/build.bat) file on where to put the dependencies.
++ [GLAD](https://glad.dav1d.de/#language=c&specification=gl&api=gl%3D3.3&api=gles1%3Dnone&api=gles2%3Dnone&api=glsc2%3Dnone&profile=compatibility&loader=on)
++ [glm](https://github.com/g-truc/glm/releases/tag/0.9.9.8)
++ [SDL2](https://github.com/libsdl-org/SDL/releases/tag/release-2.24.0)
 
 ## Controls
 
@@ -29,7 +30,7 @@ This Project uses following external libraries
 + D - Strafe Right
 + E - Move Upwards
 + Q - Move Downwards
-
++ LShift - Increase Speed
 
 ## References
 
